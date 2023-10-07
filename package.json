@@ -1,6 +1,9 @@
 {
-  "name": "root",
+  "name": "@todo/root",
   "private": true,
+  "scripts": {
+    "api": "npm run -w packages/api dev"
+  },
   "workspaces": [
     "packages/*"
   ],

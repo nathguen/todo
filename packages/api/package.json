@@ -1,5 +1,5 @@
 {
-  "name": "todo-api",
+  "name": "api",
   "version": "0.0.0",
   "description": "TypeScript + PostgreSQL + Express API Server",
   "author": "",
