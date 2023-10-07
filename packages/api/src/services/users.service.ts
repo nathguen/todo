@@ -1,7 +1,6 @@
 import { client } from '@/database';
 import { HttpException } from '@exceptions/httpException';
 import { User } from '@interfaces/users.interface';
-import { UserModel } from '@models/users.model';
 import { hash } from 'bcrypt';
 import { Service } from 'typedi';
 
@@ -25,10 +24,10 @@ export class UserService {
 
   public async createUser(userData: User): Promise<User> {
     // check for existing user
-    const { rows } = await client.query<User>('SELECT * FROM users WHERE email = $1', [userData.email]);
+    const { rowCount } = await client.query<User>('SELECT * FROM users WHERE email = $1', [userData.email]);
 
     // if user found, throw an error
-    if (rows[0]) throw new HttpException(409, `This email ${userData.email} is already taken`);
+    if (rowCount > 0) throw new HttpException(409, `This email ${userData.email} is already taken`);
 
     // create new user
     await client.query('BEGIN');
@@ -37,17 +36,20 @@ export class UserService {
       const hashedPassword = await hash(userData.password, 10);
       const createUserData: User = { ...userData, password: hashedPassword };
 
-      await client.query('INSERT INTO users (email, username, password, firstName, lastName, avatar) VALUES ($1, $2, $3, $4, $5, $6)', [
-        createUserData.email,
-        createUserData.username,
-        createUserData.password,
-        createUserData.firstName,
-        createUserData.lastName,
-        createUserData.avatar,
-      ]);
+      const { rows } = await client.query(
+        'INSERT INTO users (email, username, password, firstName, lastName, avatar) VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          createUserData.email,
+          createUserData.username,
+          createUserData.password,
+          createUserData.firstName,
+          createUserData.lastName,
+          createUserData.avatar,
+        ],
+      );
       await client.query('COMMIT');
 
-      return createUserData;
+      return rows[0];
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -84,11 +86,22 @@ export class UserService {
     }
   }
 
-  public async deleteUser(userId: number): Promise<User[]> {
-    const findUser: User = UserModel.find(user => user.id === userId);
-    if (!findUser) throw new HttpException(409, "User doesn't exist");
+  public async deleteUser(userId: number): Promise<User> {
+    const { rows } = await client.query('SELECT FROM users WHERE id = $1', [userId]);
+    if (!rows[0]) throw new HttpException(409, "User doesn't exist");
 
-    const deleteUserData: User[] = UserModel.filter(user => user.id !== findUser.id);
+    const deleteUserData: User = rows[0];
+
+    await client.query('BEGIN');
+
+    try {
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+
     return deleteUserData;
   }
 }

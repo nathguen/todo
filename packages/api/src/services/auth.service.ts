@@ -1,8 +1,8 @@
+import { client } from '@/database';
 import { SECRET_KEY } from '@config';
 import { HttpException } from '@exceptions/httpException';
 import { DataStoredInToken, TokenData } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
-import { UserModel } from '@models/users.model';
 import { compare } from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import { Service } from 'typedi';
@@ -21,8 +21,10 @@ const createCookie = (tokenData: TokenData): string => {
 @Service()
 export class AuthService {
   public async login(userData: User): Promise<{ cookie: string; findUser: User }> {
-    const findUser: User = UserModel.find(user => user.email === userData.email);
-    if (!findUser) throw new HttpException(409, `This email ${userData.email} was not found`);
+    const { rows } = await client.query('SELECT * FROM users WHERE email = $1', [userData.email]);
+    if (rows.length === 0) throw new HttpException(409, `The email ${userData.email} was not found`);
+
+    const findUser: User = rows[0];
 
     const isPasswordMatching: boolean = await compare(userData.password, findUser.password);
     if (!isPasswordMatching) throw new HttpException(409, "You're password not matching");
@@ -34,9 +36,9 @@ export class AuthService {
   }
 
   public async logout(userData: User): Promise<User> {
-    const findUser: User = UserModel.find(user => user.email === userData.email && user.password === userData.password);
-    if (!findUser) throw new HttpException(409, "User doesn't exist");
+    const { rows } = await client.query('SELECT * FROM users WHERE email = $1', [userData.email]);
+    if (rows.length === 0) throw new HttpException(409, `The email ${userData.email} was not found`);
 
-    return findUser;
+    return rows[0];
   }
 }

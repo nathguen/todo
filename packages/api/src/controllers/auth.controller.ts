@@ -12,9 +12,9 @@ export class AuthController {
   public signUp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userData: User = req.body;
-      this.user.createUser(userData);
+      const createdUser = await this.user.createUser(userData);
 
-      res.status(201).json({ data: userData, message: 'signup' });
+      res.status(201).json({ data: createdUser, message: 'signup' });
     } catch (error) {
       next(error);
     }
