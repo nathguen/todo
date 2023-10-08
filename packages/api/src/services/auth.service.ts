@@ -27,7 +27,7 @@ export class AuthService {
     const findUser: User = rows[0];
 
     const isPasswordMatching: boolean = await compare(userData.password, findUser.password);
-    if (!isPasswordMatching) throw new HttpException(409, "You're password not matching");
+    if (!isPasswordMatching) throw new HttpException(409, 'Invalid username or password');
 
     const tokenData = createToken(findUser);
     const cookie = createCookie(tokenData);

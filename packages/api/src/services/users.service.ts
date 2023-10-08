@@ -36,18 +36,18 @@ export class UserService {
       const hashedPassword = await hash(userData.password, 10);
       const createUserData: User = { ...userData, password: hashedPassword };
 
-      const { rows } = await client.query(
-        'INSERT INTO users (email, username, password, firstName, lastName, avatar) VALUES ($1, $2, $3, $4, $5, $6)',
-        [
-          createUserData.email,
-          createUserData.username,
-          createUserData.password,
-          createUserData.firstName,
-          createUserData.lastName,
-          createUserData.avatar,
-        ],
-      );
+      await client.query('INSERT INTO users (email, username, password, firstName, lastName, avatar) VALUES ($1, $2, $3, $4, $5, $6)', [
+        createUserData.email,
+        createUserData.username,
+        createUserData.password,
+        createUserData.firstName,
+        createUserData.lastName,
+        createUserData.avatar,
+      ]);
+
       await client.query('COMMIT');
+
+      const { rows } = await client.query<User>('SELECT * FROM users WHERE email = $1', [userData.email]);
 
       return rows[0];
     } catch (error) {
