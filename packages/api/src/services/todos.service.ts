@@ -1,21 +1,42 @@
 import { client } from '@/database';
-import { TodoDTO } from '@/interfaces/todos.interface';
 import { createTodoQuery, deleteTodoQuery, getTodoByIdQuery, updateTodoQuery } from '@/queries/todos.query';
+import { TodoItem, TodoList, User } from '@common/types';
 import { HttpException } from '@exceptions/httpException';
-import { User } from '@interfaces/users.interface';
 import { Service } from 'typedi';
 
 @Service()
 export class TodoService {
-  public async findAllTodos(): Promise<TodoDTO[]> {
-    const { rows } = await client.query<TodoDTO>('SELECT * FROM todos');
-    const todos: TodoDTO[] = rows;
+  public async findAllTodos(): Promise<TodoItem[]> {
+    const { rows } = await client.query<TodoItem>('SELECT * FROM todos');
+    const todos: TodoItem[] = rows;
 
     return todos;
   }
 
-  public async findTodoById(todoId: number): Promise<TodoDTO> {
-    const { rows } = await client.query<TodoDTO>(getTodoByIdQuery, [todoId]);
+  public async findTodoListsByUserId(userId: number): Promise<TodoList[]> {
+    const { rows: todoListRows } = await client.query<TodoList>('SELECT * FROM todo_lists WHERE owner_id = $1', [userId]);
+    const todoLists: TodoList[] = todoListRows;
+
+    const todoListsWithTodos = await Promise.all(
+      todoLists.map(async todoList => {
+        const { rows: todoRows } = await client.query<TodoItem>(
+          'SELECT * FROM todos JOIN todo_lists ON todos.todo_list_id = todo_lists.id WHERE todo_lists.id = $1',
+          [todoList.id],
+        );
+        const todos: TodoItem[] = todoRows;
+
+        return {
+          ...todoList,
+          todos,
+        };
+      }),
+    );
+
+    return todoListsWithTodos;
+  }
+
+  public async findTodoById(todoId: number): Promise<TodoItem> {
+    const { rows } = await client.query<TodoItem>(getTodoByIdQuery, [todoId]);
 
     // if no user found, throw an error
     if (!rows[0]) throw new HttpException(404, "Todo doesn't exist");
@@ -23,18 +44,18 @@ export class TodoService {
     return rows[0];
   }
 
-  public async createTodo(todoData: TodoDTO): Promise<TodoDTO> {
+  public async createTodo(todoData: TodoItem): Promise<TodoItem> {
     // add new todo
     await client.query('BEGIN');
 
     try {
-      const createTodoData: TodoDTO = { ...todoData };
+      const createTodoData: TodoItem = { ...todoData };
 
       const { rows } = await client.query(createTodoQuery, [
         createTodoData.title,
         createTodoData.description,
         createTodoData.status,
-        createTodoData.ownerId,
+        createTodoData.owner_id,
       ]);
       await client.query('COMMIT');
 
@@ -45,7 +66,7 @@ export class TodoService {
     }
   }
 
-  public async updateTodo(todoId: number, todoData: TodoDTO): Promise<TodoDTO> {
+  public async updateTodo(todoId: number, todoData: TodoItem): Promise<TodoItem> {
     // check for existing todo
     const { rows } = await client.query<User>('SELECT * FROM users WHERE id = $1', [todoId]);
     if (!rows[0]) throw new HttpException(409, "Todo doesn't exist");
@@ -61,9 +82,9 @@ export class TodoService {
         updatedTodo.title,
         updatedTodo.description,
         updatedTodo.status,
-        updatedTodo.ownerId,
-        updatedTodo.archivedAt,
-        updatedTodo.parentId,
+        updatedTodo.owner_id,
+        updatedTodo.archived_at,
+        updatedTodo.parent_id,
         todoId,
       ]);
       await client.query('COMMIT');
@@ -75,7 +96,7 @@ export class TodoService {
     }
   }
 
-  public async deleteTodo(todoId: number): Promise<TodoDTO> {
+  public async deleteTodo(todoId: number): Promise<TodoItem> {
     const todo = await this.findTodoById(todoId);
 
     await client.query('BEGIN');
