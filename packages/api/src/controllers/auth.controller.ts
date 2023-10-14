@@ -1,6 +1,6 @@
 import { UserService } from '@/services/users.service';
+import { User } from '@common/types/users.interface';
 import { RequestWithUser } from '@interfaces/auth.interface';
-import { User } from '@interfaces/users.interface';
 import { AuthService } from '@services/auth.service';
 import { NextFunction, Request, Response } from 'express';
 import { Container } from 'typedi';
