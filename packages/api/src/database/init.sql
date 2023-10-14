@@ -27,18 +27,18 @@ INSERT INTO
   users (email, username, password, firstName, lastName)
 VALUES
   (
-    'nathan.guenther.web@gmail.com',
-    'frostydog',
+    'john@test.com',
+    'johndoe',
     'test@1234',
-    'Nathan',
-    'Guenther'
+    'Johnny',
+    'Tester'
   ),
   (
-    'need2laugh2@gmail.com',
-    'moomaloo',
+    'dina@test.com',
+    'dinadino',
     'test@1234',
-    'Emily',
-    'Guenther'
+    'Dina',
+    'Tester'
   );
 
 CREATE TABLE
