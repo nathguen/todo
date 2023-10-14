@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { FaPlusCircle, FaSearch } from "react-icons/fa";
 import { RxAvatar } from "react-icons/rx";
 import { fetchUserByID } from "../integrations";
+import AuthProvider from "../providers/auth";
 import { ListsProvider, useLists } from "../providers/lists";
 import { darkTheme } from "./theme";
 
@@ -44,46 +45,48 @@ function Home() {
   };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <main>
-        <header className="flex flex-row justify-between p-4 items-center">
-          <div className="flex flex-row items-center">
-            <RxAvatar className="text-4xl mr-4" />
+    <main>
+      <header className="flex flex-row justify-between p-4 items-center">
+        <div className="flex flex-row items-center">
+          <RxAvatar className="text-4xl mr-4" />
 
-            <Typography>Nathan Guenther</Typography>
-          </div>
-
-          <FaSearch className="text-xl" />
-        </header>
-
-        {isLoading && (
-          <div className="px-4">
-            <LinearProgress />
-          </div>
-        )}
-
-        {todoLists.map((list) => (
-          <MuiList key={list.id}>
-            <ListItemButton onClick={() => handleSelectList(list)}>
-              <ListItemText>{list.title}</ListItemText>
-            </ListItemButton>
-          </MuiList>
-        ))}
-
-        <div className="fixed bottom-2 left-2 right-2">
-          <Button startIcon={<FaPlusCircle />} variant="outlined" fullWidth>
-            New List
-          </Button>
+          <Typography>Nathan Guenther</Typography>
         </div>
-      </main>
-    </ThemeProvider>
+
+        <FaSearch className="text-xl" />
+      </header>
+
+      {isLoading && (
+        <div className="px-4">
+          <LinearProgress />
+        </div>
+      )}
+
+      {todoLists.map((list) => (
+        <MuiList key={list.id}>
+          <ListItemButton onClick={() => handleSelectList(list)}>
+            <ListItemText>{list.title}</ListItemText>
+          </ListItemButton>
+        </MuiList>
+      ))}
+
+      <div className="fixed bottom-2 left-2 right-2">
+        <Button startIcon={<FaPlusCircle />} variant="outlined" fullWidth>
+          New List
+        </Button>
+      </div>
+    </main>
   );
 }
 
 export default function HomeWrapper() {
   return (
-    <ListsProvider>
-      <Home />
-    </ListsProvider>
+    <ThemeProvider theme={darkTheme}>
+      <AuthProvider>
+        <ListsProvider>
+          <Home />
+        </ListsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

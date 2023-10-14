@@ -14,18 +14,36 @@ export const getTodoByIdQuery = `
   WHERE t.id = $1
 `;
 
+export const getTodosByTodoListIdQuery = `
+  SELECT 
+    id,
+    title, 
+    description, 
+    (SELECT status FROM todo_statuses AS ts WHERE ts.id = t.status_id) AS status, 
+    owner_id, 
+    created_at, 
+    updated_at, 
+    archived_at, 
+    parent_id 
+  FROM 
+    todos AS t 
+  WHERE t.todo_list_id = $1
+`;
+
 export const createTodoQuery = `
   INSERT INTO todos (
     title, 
     description,
     status_id,
     owner_id,
+    todo_list_id,
     updated_at
   ) VALUES (
     $1,
     $2,
     (SELECT id FROM todo_statuses AS t WHERE t.status = $3),
     $4,
+    $5,
     NOW()
   ) RETURNING *
 `;

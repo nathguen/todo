@@ -2,19 +2,25 @@
 
 import { darkTheme } from "@/web/app/theme";
 import List from "@/web/components/List";
+import { createTodo } from "@/web/integrations";
+import AuthProvider, { useAuth } from "@/web/providers/auth";
 import { ListsProvider, useLists } from "@/web/providers/lists";
 // import { lists } from "@/web/data/lists";
 import {
   AppBar,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
   IconButton,
   LinearProgress,
+  TextField,
   ThemeProvider,
   Toolbar,
   Typography,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import { FiChevronLeft } from "react-icons/fi";
 import { HiDotsHorizontal, HiUsers } from "react-icons/hi";
@@ -29,19 +35,42 @@ function ListPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
 
-  const { isLoading, fetchTodoLists, todoLists } = useLists();
+  const listId = Number(id);
+
+  const [taskTitle, setTaskTitle] = useState<string>("");
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [savingTask, setSavingTask] = useState(false);
+
+  const { isLoading: isLoadingLists, fetchTodoLists, todoLists } = useLists();
+  const { user, getUser, isLoading: isLoadingUser } = useAuth();
 
   const todoList = useMemo(() => {
-    return todoLists.find((list) => list.id === Number(id));
+    return todoLists.find((list) => list.id === listId);
   }, [id, todoLists]);
+
+  const handleAddTask = async () => {
+    if (!user) return;
+
+    setSavingTask(true);
+
+    try {
+      await createTodo(user.id, listId, taskTitle);
+      await fetchTodoLists();
+    } catch (error) {
+    } finally {
+      setSavingTask(false);
+      setShowAddTask(false);
+    }
+  };
 
   useEffect(() => {
     fetchTodoLists();
+
+    // @TODO replace with authenticated user
+    getUser();
   }, []);
 
-  console.log(todoList);
-
-  if (isLoading || !todoList) {
+  if (isLoadingLists || isLoadingUser || !todoList) {
     return (
       <main className="px-4">
         <LinearProgress />
@@ -82,20 +111,45 @@ function ListPage({ params }: PageProps) {
       {todoList.todos.length > 0 && <List list={todoList} />}
 
       <div className="fixed bottom-2 left-2 right-2">
-        <Button startIcon={<FaPlus />} variant="outlined" fullWidth>
+        <Button
+          startIcon={<FaPlus />}
+          variant="outlined"
+          fullWidth
+          onClick={() => setShowAddTask(true)}
+        >
           Add a Task
         </Button>
       </div>
+
+      <Dialog open={showAddTask} fullWidth>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="title"
+            label="Add a Task"
+            type="text"
+            fullWidth
+            onChange={(e) => setTaskTitle(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAddTask(false)}>Cancel</Button>
+          <Button onClick={handleAddTask}>Add</Button>
+        </DialogActions>
+      </Dialog>
     </main>
   );
 }
 
 export default function ListPageWrapper({ params }: PageProps) {
   return (
-    <ListsProvider>
-      <ThemeProvider theme={darkTheme}>
-        <ListPage params={params} />
-      </ThemeProvider>
-    </ListsProvider>
+    <ThemeProvider theme={darkTheme}>
+      <AuthProvider>
+        <ListsProvider>
+          <ListPage params={params} />
+        </ListsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

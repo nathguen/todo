@@ -1,5 +1,5 @@
 import { client } from '@/database';
-import { createTodoQuery, deleteTodoQuery, getTodoByIdQuery, updateTodoQuery } from '@/queries/todos.query';
+import { createTodoQuery, deleteTodoQuery, getTodoByIdQuery, getTodosByTodoListIdQuery, updateTodoQuery } from '@/queries/todos.query';
 import { TodoItem, TodoList, User } from '@common/types';
 import { HttpException } from '@exceptions/httpException';
 import { Service } from 'typedi';
@@ -19,10 +19,7 @@ export class TodoService {
 
     const todoListsWithTodos = await Promise.all(
       todoLists.map(async todoList => {
-        const { rows: todoRows } = await client.query<TodoItem>(
-          'SELECT * FROM todos JOIN todo_lists ON todos.todo_list_id = todo_lists.id WHERE todo_lists.id = $1',
-          [todoList.id],
-        );
+        const { rows: todoRows } = await client.query<TodoItem>(getTodosByTodoListIdQuery, [todoList.id]);
         const todos: TodoItem[] = todoRows;
 
         return {
@@ -56,7 +53,9 @@ export class TodoService {
         createTodoData.description,
         createTodoData.status,
         createTodoData.owner_id,
+        createTodoData.todo_list_id,
       ]);
+      console.log({ rows });
       await client.query('COMMIT');
 
       return this.findTodoById(rows[0].id);
